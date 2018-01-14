@@ -3,7 +3,7 @@ Bioacoustic and Electrophysiology Data Analysis Package
 
 Dynamical Systems Lab - University of Buenos Aires (http://www.lsd.df.uba.ar/)
 
-This package was originally conceived as partial port of warbleR (https://github.com/maRce10/warbleR) to Python. It implements the following classes and methods:
+This package was originally conceived as partial port of warbleR to Python (https://github.com/maRce10/warbleR, Araya-Salas 2017). It implements the following classes and methods:
 
 Wav - Inherits from numpy.ndarray. Represents wave objects with audio or electrophysiology data (wav files). Implements methods to read, write, plot, normalize, crop, clip, smooth, filter, apply time manipulations, calculate envelope, correlations, spectrograms, correlation-spectrograms, smooth time warping and other manipulations. 
 
@@ -28,3 +28,5 @@ References
 ----------
 
 Perl YS, Arneodo EM, Amador A, Mindlin GB (2012) Nonlinear dynamics and the synthesis of Zebra finch song. Int J Bifurc Chaos 22:1250235.
+
+Araya-Salas, M. and Smith-Vidaurre, G. (2017), warbleR: an r package to streamline analysis of animal acoustic signals. Methods Ecol Evol. 8, 184-191. PDF
