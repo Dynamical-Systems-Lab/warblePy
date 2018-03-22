@@ -16,6 +16,7 @@ import math
 import scipy.io.wavfile
 import warnings
 import Annotate
+import pdb
 
 from Wav import Wav, WavPromise
 from Rec import Rec, ann_iter
@@ -431,9 +432,7 @@ class Warble(collections.abc.Sequence):
         annot_dict={annot_type:self.annot[annot_type].loc[record_id] for annot_type in self.annot if record_id in self.annot[annot_type].index}
         return Rec(record=rec_record,annot=annot_dict,**rec_channels)
 
-
     #dealing with annotations        
-        
     def load_annot(self,*args,**kwargs):
         warnings.warn("deprecated, use annot_load instead")
         return self.annot_load(*args,**kwargs)
@@ -529,7 +528,8 @@ class Warble(collections.abc.Sequence):
         annot_db['datetime']+=pandas.to_timedelta(annot_db['start'],unit='s')
         col_names += ['duration','datetime','comment']
         col_names += [c for c in annot_db.columns.values if c not in col_names]
-        annot_db=annot_db.reindex_axis(col_names,axis=1)
+        #annot_db=annot_db.reindex_axis(col_names,axis=1)
+        annot_db=annot_db.reindex(col_names,axis=1)
         annot_db.name=annot_type
         self.annot[annot_type]=annot_db
         return self.invisible()        
@@ -676,9 +676,9 @@ class Warble(collections.abc.Sequence):
                 for rec in progressbar(iter(self.subset(select,by='record_db').subset("record_id>"+str(last_rid),by='record_db'))):
                     try:
                         _=self.record_db.set_value(rec.rid,var,kwargs[var](rec));
-                    except:
+                    except Exception as err:
                         _=self.record_db.set_value(rec.rid,var,numpy.nan);
-                        warnings.warn("Error calculating rid "+str(rec.rid))
+                        warnings.warn("Error calculating rid "+str(rec.rid)+"\n"+str(err))
                 if values is not None:
                     raise Error("'Values' argument not implemented for 'record_db' yet")
         else:
@@ -695,9 +695,9 @@ class Warble(collections.abc.Sequence):
                 for ann in progressbar(self.iter_annot(db,select,_select="record_id>"+str(last_rid),flanking=flanking)):
                     try:
                         _=self.annot[db].set_value((ann.rid,ann.aid),var,kwargs[var](ann));
-                    except:
+                    except Exception as err:
                         _=self.annot[db].set_value((ann.rid,ann.aid),var,numpy.nan);
-                        warnings.warn("Error calculating rid "+str(ann.rid)+ ", aid"+str(ann.aid))
+                        warnings.warn("Error calculating rid "+str(ann.rid)+ ", aid"+str(ann.aid)+"\n"+str(err))
                         
             if values is not None:
                 #initializing variables
@@ -730,9 +730,9 @@ class Warble(collections.abc.Sequence):
                 for ann in progressbar(self.iter_annot(db,select,_select="record_id>"+str(last_rid),flanking=flanking)):
                     try:
                         v=values(ann)
-                    except:
+                    except Exception as err:
                         v=eg
-                        warnings.warn("Error calculating rid "+str(ann.rid)+ ", aid"+str(ann.aid))            
+                        warnings.warn("Error calculating rid "+str(ann.rid)+ ", aid"+str(ann.aid)+"\n"+str(err))            
                     for var in v:
                         _=self.annot[db].set_value((ann.rid,ann.aid),var,v[var]); 
 
@@ -929,16 +929,17 @@ class Warble(collections.abc.Sequence):
             raise Error("method should be callable or str")
                 
         for rec in progressbar(iter_rec):
-            #rec=warble[11]
+            #rec=w[11]
             try:
                 annot_rec=detect_fun(rec)
                 annot_rec.insert(0,'record_id',int(rec.rid))
                 annot_db=annot_db.append(annot_rec, ignore_index=True, verify_integrity=True)
-            except:
-                warnings.warn("Record "+str(rec.rid)+" failed")
+            except Exception as err:
+                warnings.warn("Record "+str(rec.rid)+" failed"+"\n"+str(err))
 
         col_names += [c for c in annot_db.columns.values if c not in col_names]
-        annot_db=annot_db.reindex_axis(col_names,axis=1)
+        #annot_db=annot_db.reindex_axis(col_names,axis=1)
+        annot_db=annot_db.reindex(col_names,axis=1)
         annot_db.sort_values(['record_id','start'],inplace=True) 
         annot_db['annot_id']=annot_db.groupby('record_id')['annot_id'].transform(lambda x:numpy.arange(len(x)))
         annot_db.set_index(['record_id','annot_id'],drop=False,inplace=True,verify_integrity=True)
@@ -1016,10 +1017,11 @@ class Warble(collections.abc.Sequence):
                 cdb.insert(0,'record_id',int(rec.rid))
                 annot_db=annot_db.append(cdb, ignore_index=True, verify_integrity=False)
             except Exception as err:
-                warnings.warn("Record "+str(rec.rid)+" failed with error type "+str(type(err)))
+                warnings.warn("Record "+str(rec.rid)+" failed with error type "+str(type(err))+"\n"+str(err))
             
         col_names += [c for c in annot_db.columns.values if c not in col_names]
-        annot_db=annot_db.reindex_axis(col_names,axis=1)
+        #annot_db=annot_db.reindex_axis(col_names,axis=1)
+        annot_db=annot_db.reindex(col_names,axis=1)
         annot_db.sort_values(['record_id','start'],inplace=True) 
         annot_db['annot_id']=annot_db.groupby('record_id')['annot_id'].transform(lambda x:numpy.arange(len(x)))
         annot_db[['record_id','annot_id']] = annot_db[['record_id','annot_id']].astype(numpy.int64)
