@@ -100,7 +100,7 @@ def finch2(env, fund, Q=None, sigma_amplitude=0.05, sigma_beta=0.002,
     #creating noise vectors
     noise_beta_L=numpy.random.randn(to+1)*sigma_beta #normal noise for beta
     noise_beta_R=numpy.random.randn(to+1)*sigma_beta #normal noise for beta
-    noise_amplitude=(2*numpy.random.rand(size+1)-1)*sigma_amplitude #uniform noise for amplitude  
+    noise_amplitude=(2*numpy.random.rand(to+1)-1)*sigma_amplitude #uniform noise for amplitude  
      
     if filter_: #complete model with trachea and OEC filter
         v=numpy.zeros(7) #Initial conditions
