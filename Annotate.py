@@ -274,7 +274,7 @@ def consolidate(annot_db,when,additive='all'):
 
     cols.append('consolidated_duration')
     cols += [c for c in annot_db.columns.values if c not in cols]
-    cons_db=cons_db.reindex_axis(cols,axis=1)
+    cons_db=cons_db.reindex(cols,axis=1)
     cons_db[['record_id','annot_id']] = cons_db[['record_id','annot_id']].astype(np.int64)
     cons_db.set_index(['record_id','annot_id'],drop=False,inplace=True,verify_integrity=True)
    

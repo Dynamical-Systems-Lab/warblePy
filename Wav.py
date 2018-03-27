@@ -837,7 +837,8 @@ class Wav(numpy.ndarray):
         """
         if not method in ['scipy','mlab','scipy_praat','mlab_praat']: raise Error("Method "+method+" not implemented")
         if not tlim is None:
-            assert len(tlim)==2
+            if len(tlim)!=2:
+                raise Error("Wav.spectrogram tlim should be a 2-tuple of floats")
             wav=self.crop(start=tlim[0],end=tlim[1])
         else:
             wav=self
@@ -1339,6 +1340,17 @@ class Wav(numpy.ndarray):
         return Wav(scipy.signal.decimate(self, q=q, zero_phase=zero_phase, **kwargs), self.rate/q, self.delay, tjust=self.tjust)
 
     def play(self,start=None,end=None):
+        """
+        Play the wav signal as sound
+        start - double, optinal
+            start time in seconds
+        end - double, optional
+            end time in seconds
+            
+        uses mplayer
+        Installation:
+            ubuntu> sudo apt-get install mplayer
+        """
         if start is None: start=0
         if end is None: end=self.duration
         fn=os.path.join(self.file_path,self.file_name)

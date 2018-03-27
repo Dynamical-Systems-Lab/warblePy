@@ -828,21 +828,25 @@ class Spe(TimeMatrix):
         #FIXME: this algorithm has numericall issues
         F = template.shape[0]    
         T1 = template.shape[1]    
-        assert self.shape[0] == F
+        if self.shape[0] != F:
+            raise Error("self and template should have same number of freqs")
 
         if flim is None: 
             flim_idx=(0,F-1)
             flim=(self.freqs[0],self.freqs[flim_idx[1]])
         else:
-            assert len(flim)==2
+            if len(flim)!=2:
+                raise Error("flim should be a 2-tuple")
             flim_idx = (numpy.argmin(numpy.abs(flim[0] - self.freqs)),numpy.argmin(numpy.abs(flim[1] - self.freqs)))
         F = flim_idx[1]-flim_idx[0]
             
         X1 = template[flim_idx[0]:flim_idx[1],:].array
         X2 = self[flim_idx[0]:flim_idx[1],:].array
 
-        assert T1<=self.shape[1] or mode!='valid'
-        assert self.method == template.method
+        if not (T1<=self.shape[1] or mode!='valid'):
+            raise Error("template should be shorter than self if mode is 'valid'")
+        if not self.method == template.method:
+            raise Error("self and template have to be calculated with the same method")
         
         X1=(X1-numpy.mean(X1))/numpy.std(X1)
         U=numpy.ones((F,T1))

@@ -1017,6 +1017,7 @@ class Warble(collections.abc.Sequence):
                 cdb.insert(0,'record_id',int(rec.rid))
                 annot_db=annot_db.append(cdb, ignore_index=True, verify_integrity=False)
             except Exception as err:
+                #pdb.set_trace()
                 warnings.warn("Record "+str(rec.rid)+" failed with error type "+str(type(err))+"\n"+str(err))
             
         col_names += [c for c in annot_db.columns.values if c not in col_names]
