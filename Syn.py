@@ -14,7 +14,9 @@ import scipy.integrate
 import scipy.interpolate
 import matplotlib.pyplot 
 import numba
+import pdb
 
+class Error(Exception): pass
 
 def finch2(env, fund, Q=None, sigma_amplitude=0.05, sigma_beta=0.002, 
           rate = 44150, steps_per_sample = 20, filter_=True,
@@ -268,15 +270,16 @@ def finch(env, beta=None, fund=None, sigma_amplitude=0.05, sigma_beta=0.002,
     gamma=24000.   #defining gamma time scale constante from eq. 8 Sanz Perl 2011
     c=35000        #speed of sound in mm per second   
     
-    assert (beta is not None) or (fund is not None)
+    if not((beta is not None) or (fund is not None)):
+        raise Error("beta or fund required")
     
     if beta is None: #calculating beta from fund based on OEC database
         OEC="OEC.new.dat" #name of the OEC database
-        #OEC_PATH = "/home/alan/Lab-LSD/Code/[2016.AB]warblePy/warble_v01/data/OEC.new.dat"
+        #OEC_PATH = "/mnt/Storage/git/warblePy/data/OEC.new.dat"
         this_dir, this_filename = os.path.split(__file__)
         OEC_PATH = os.path.join(this_dir, "data", OEC)        
         OEC_db=pandas.read_table(OEC_PATH,header=None)       
-        fund2beta=scipy.interpolate.interp1d(OEC_db.ix[:,2], OEC_db.ix[:,1],bounds_error=False
+        fund2beta=scipy.interpolate.interp1d(OEC_db.iloc[:,2], OEC_db.iloc[:,1],bounds_error=False
                                    ,fill_value=(OEC_db.iloc[0,1],OEC_db.iloc[-1,1]))
         beta=fund2beta(fund) #calculating beta from fund
         beta=numpy.where(fund<10,0.15*numpy.ones(len(beta)),beta) #set value to 0.15 where fund<10hz
@@ -298,7 +301,7 @@ def finch(env, beta=None, fund=None, sigma_amplitude=0.05, sigma_beta=0.002,
     
     #creating noise vectors
     noise_beta=numpy.random.randn(to+1)*sigma_beta #normal noise for beta
-    noise_amplitude=(2*numpy.random.rand(size+1)-1)*sigma_amplitude #uniform noise for amplitude  
+    noise_amplitude=(2*numpy.random.rand(to+1)-1)*sigma_amplitude #uniform noise for amplitude  
      
     if filter_: #complete model with trachea and OEC filter
         v=numpy.zeros(5) #Initial conditions
@@ -388,7 +391,10 @@ def finch(env, beta=None, fund=None, sigma_amplitude=0.05, sigma_beta=0.002,
 
         integrate(v,sound,labium) 
         
-    sound=sound/numpy.max(numpy.abs(sound))
+    maxabs_sound = numpy.nanmax(numpy.abs(sound))    
+    if not numpy.isnan(maxabs_sound) and maxabs_sound>0:
+        sound=sound/numpy.max(numpy.abs(sound))
+    
     #labium=labium/numpy.max(numpy.abs(labium))    
 
     channels=dict()
