@@ -374,6 +374,7 @@ def _difference_(x,y):
             #       xxxxxxxxxxx
             # yyyy   
             j+=1
+            # if last row in y, x should be added to result
             
         else:
             raise Error("Should never get here")
