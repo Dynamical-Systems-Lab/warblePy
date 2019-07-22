@@ -19,6 +19,8 @@ import tempfile
 import warnings
 import numba
 import collections
+import pdb
+
 
 class Error(Exception): pass
 
@@ -1236,7 +1238,7 @@ class Wav(numpy.ndarray):
         if to is not None:
             s1.stw_cor=s1.cor(to)
         
-        #these guys culd be calculated from stw_times and stw_delays (implemented as Warped methods)            
+        #these guys could be calculated from stw_times and stw_delays (implemented as Warped methods)            
         #s1.stw_times_delays=numpy.array([td,d1])
         #s1.stw_delays_str=numpy.array2string(d1,max_line_width=1e6,precision=4)
         #s1.stw_times_delays_str=numpy.array2string(s1.stw_times_delays,max_line_width=1e6,precision=4)
@@ -1543,6 +1545,54 @@ class Warped(Wav):
         return Env(self.stw_delay_fun(self.get_times()),rate=self.rate,\
                    delay=self.delay,tjust=self.tjust,channel="stw_delay")
 
+    def __add__(self,other):
+        out = super().__add__(other)
+        out.method = self.method
+        out.method_args = self.method_args
+        if hasattr(self, 'stw_times'):
+            out.stw_times = self.stw_times
+        if hasattr(self, 'stw_delays'):
+            out.stw_delays = self.stw_delays
+        if hasattr(self, 'stw_cor'):
+            out.stw_cor = self.stw_cor
+        return out
+
+    def __sub__(self,other):
+        out = super().__sub__(other)
+        out.method = self.method
+        out.method_args = self.method_args
+        if hasattr(self, 'stw_times'):
+            out.stw_times = self.stw_times
+        if hasattr(self, 'stw_delays'):
+            out.stw_delays = self.stw_delays
+        if hasattr(self, 'stw_cor'):
+            out.stw_cor = self.stw_cor
+        return out
+
+    def __mul__(self,other):
+        out = super().__mul__(other)
+        out.method = self.method
+        out.method_args = self.method_args
+        if hasattr(self, 'stw_times'):
+            out.stw_times = self.stw_times
+        if hasattr(self, 'stw_delays'):
+            out.stw_delays = self.stw_delays
+        if hasattr(self, 'stw_cor'):
+            out.stw_cor = self.stw_cor
+        return out
+
+    def __div__(self,other):
+        out = super().__div__(other)
+        out.method = self.method
+        out.method_args = self.method_args
+        if hasattr(self, 'stw_times'):
+            out.stw_times = self.stw_times
+        if hasattr(self, 'stw_delays'):
+            out.stw_delays = self.stw_delays
+        if hasattr(self, 'stw_cor'):
+            out.stw_cor = self.stw_cor
+        return out
+    
 class Promise(collections.abc.Callable):
     pass
 

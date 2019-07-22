@@ -18,7 +18,7 @@ import warnings
 import Annotate
 import pdb
 
-from Wav import Wav, WavPromise
+from Wav import Wav, WavPromise, Warped
 from Rec import Rec, ann_iter
 from Spe import Ens
             
@@ -1182,11 +1182,11 @@ class Warble(collections.abc.Sequence):
             return intersect_db     
         
             
-    def get_ensemble(self, annot='record', get=lambda rec: rec.s, select=None, set_delay=0, flanking=0):
+    def get_ensemble(self, annot='record', get=lambda rec: rec.s, select=None, set_delay=0, flanking=0, warped_delays=False):
         """
         Gets an ensemble from a warble object
         
-        An ensemble is basically a matrix where each row is an annotation and 
+        An ensemble is a matrix where each row is an annotation and 
         each column is a time. 
         
         annot - str
@@ -1200,6 +1200,12 @@ class Warble(collections.abc.Sequence):
             If None the delay (or start) of the annotations are not changed.
         flanking - float
             time in seconds by which to flank the annotation
+        warped_delays - Bool
+            if True and elements inherit from class Warped a warped_delays attributed is
+            added to the output Ens object. This attribute contains an Ens object of the
+            same dimensions as the original containing the warped delays as returned by 
+            Warped.get_delays_env().
+            
         returns an object of type Ens
         """
         if not annot in self.annot:
@@ -1216,7 +1222,6 @@ class Warble(collections.abc.Sequence):
         #rid,aid=db.duration.idxmax()        
         #max_dur_wav=get(self.get_annot(annot,record_id=rid,annot_id=aid,flanking=flanking)).set_delay(set_delay)
         #times=max_dur_wav.get_times()
-        
         ens_list=[get(ann).set_delay(set_delay) for \
                       ann in progressbar(self.iter_annot(annot,select=select,flanking=flanking))]
         ens_duration=[ens_v.duration for ens_v in ens_list]
@@ -1227,6 +1232,13 @@ class Warble(collections.abc.Sequence):
         ensemble=Ens(ens_matrix, db.index, times=times, tjust=max_dur_wav.tjust)
         ensemble.db=db
         ensemble.annot_type=annot
+
+        if warped_delays and isinstance(ens_list[0], Warped):
+            if set_delay is not None:
+                warnings.warn('set_delay should be None when using warped_delays')
+            ens_warped_delays = numpy.matrix([ens.get_delays_env().interpolate(times) for ens in ens_list])
+            ensemble.warped_delays = Ens(ens_warped_delays, db.index, times=times, tjust=max_dur_wav.tjust)       
+
         return ensemble
             
     def invisible(self):
