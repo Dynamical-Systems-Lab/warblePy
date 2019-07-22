@@ -535,7 +535,7 @@ def plot_filter(r=0.1,Ch=0.8e-8/360,Lb=1e4,Lg=82,Rb=0.5e7,Rh=6e5,length=4,rate=4
     Rh - float
         Equivalent resistance of the OEC (which works as a Helmholtz resonator)
     length - float
-        lenght of the trachea in mm   
+        length of the trachea in mm   
     """
     
     freqT = 35000/(4 * length)    
