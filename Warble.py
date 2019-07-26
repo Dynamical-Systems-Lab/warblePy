@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Aug  2 17:48:55 2016
+WarblePy package was developed in the Laboratory of Dynamical Systems, University
+of Buenos Aires, Argentina by Alan Bush. The package is loosley inspired in 
+warbleR by Marcelo Araya-Sala (hence the name).  
 
-@author: alan
+The package provides functionality for the analysis of EMG data from sleeping 
+and singing birds. 
+
+This module defines the Warble object, which represents a collection of records 
+for a given bird. 
+
+@author: Alan Bush
 """
 import os
 import fnmatch

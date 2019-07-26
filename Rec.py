@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Aug  1 19:32:42 2016
+Rec.py module of WarblePy. 
 
-@author: alan
+Rec: represents a record, that is a collection of several Wavs recorded simultaneously.
+     record usually contain sound and EMG data. 
+Ann: Inherits from Rec. Represents an annoation within a record. 
+
+@author: Alan Bush
 """
 
 import collections

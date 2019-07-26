@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Dec 20 18:17:46 2016
+Annotate.py module of WarblePy. 
 
-@author: alan
+This module provides functions to work with annotation tables. 
+
+@author: Alan Bush
 """
 
 #cargo paquetes estandar

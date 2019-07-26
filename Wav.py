@@ -1,6 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-The Wav module defines the Wav, Env and Spe object and methods.
+Wav.py module of WarblePy. This module defines the Wav, Env, Cor and Warped object and methods.
 
+Wav: represents a wave object, containing sound or EMG activity. These objects 
+     can represent .wav files.  
+Env: Inherits from Wav. Represents the 'envelope' of a Wav object
+Cor: Inherits from Wav. Represents the correlation between two Wav objects
+Warped: Inherits from Wav. Represents a time warped version of a Wav. 
 ---
 Author: Alan Bush (loosely inspired in wavio by Warren Weckesser)
 """

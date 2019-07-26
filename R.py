@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Feb 16 14:11:06 2017
+R.py module of WarblePy. Small module to facilitate working with rpy2.
 
-@author: alan
+@author: Alan Bush
 """
 
 import rpy2.robjects as ro; R = ro.r
@@ -24,6 +24,9 @@ aes=gg.aes_string;
 class Error(Exception): pass
 
 def df2R(df,as_factor=None,int64_to_str=True):
+    """
+    Transforms a pandas dataframe into an R dataframe. 
+    """
     if int64_to_str is True:
         df=df.copy()
         for col in df.columns:

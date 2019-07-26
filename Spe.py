@@ -1,5 +1,10 @@
 """
-The Spe module defines the Spe object and methods.
+Spe.py module of WarblePy. This module defines the spectrogram object and methods.
+
+TimeMatrix: Represents a matrix in which each row represents a different time.
+Ens: Object representing an ensemble of Wavs or Envs. Inherits from TimeMatrix. 
+Spe: Object representing a spectrogram of a Wav. Inherits from TimeMatrix. 
+CorSpe: Object representing a correlation spectrogram. Inherits from TimeMatrix. 
 
 ---
 Author: Alan Bush 
@@ -59,7 +64,6 @@ class TimeMatrix(numpy.ndarray):
             s+="\n"      
         return s
         
-
     def copy(self,order='K'):
         output=type(self)(self.array.copy(order),y=self.y.copy(),times=self.times.copy(),tjust=self.tjust)
         output.method=self.method
@@ -743,6 +747,25 @@ class Ens(TimeMatrix):
         Get element of ensenble by positinal index
         """
         return Env(self.array[key,:], self.rate, delay=self.delay, tjust=self.tjust)
+    
+    def dejitter(self, tlim=0.05, maxIter=20):
+        """
+        apply lateral displacements to de-jitter the signal against the median
+        """
+        c=0
+        sas=1
+        while sas > 0 and c < maxIter:
+            sas=0
+            m = self.median()
+            for i in range(self.shape[0]):
+                tmi=self.get_env(i).correlate(m,mode='full').crop(-0.05,0.05).time_max()
+                s=-int(round(tmi*self.rate))
+                sas = sas + abs(s)
+                self[i,:] = numpy.roll(self.array[i,:],shift=s,axis=0)
+            c=c+1
+            
+        return self            
+    
         
 class Spe(TimeMatrix):
     """

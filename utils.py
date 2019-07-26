@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Sep  9 12:25:29 2016
+Utility fucntions for WarblePy.
 
-@author: alan
+@author: Alan Bush
 """
 import os
 import copy
