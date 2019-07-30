@@ -111,9 +111,10 @@ def NMF_ISRA_lag_fix_X(Y, A=None, X=None, W=None, S=0, A_max=2, A_min=1e-2, maxI
     converged = False 
     prev_norm_uA = 1
     prev_norm_uL = 1
+    prev_norm_uW = 1
     stage = 0
     uL = np.zeros((I,J))
-    
+    uW = np.identity(J)
     while count<maxIter and not converged:
         
         #updating Yhat
@@ -124,10 +125,10 @@ def NMF_ISRA_lag_fix_X(Y, A=None, X=None, W=None, S=0, A_max=2, A_min=1e-2, maxI
         #updating A
         if stage >= 0:
             uA = np.zeros((I,J))
-            #regA = np.clip(((3*A)-IJx1)*(A-IJx1),0,1)
-            regA = IJx1 - 2*(A>0.5) + 2*(A>1)
+            gradADA3 = alpha_A*np.clip(((3*A)-IJx1)*(A-IJx1),0,1)
             for s in range(S_min,S_max+1):
-                uA = uA + (L==s) * (((Y @ np.roll(X,s).T @ W) - alpha_A*regA) / ((Yhat @ np.roll(X,s).T @ W) + eps))
+                uA = uA + (L==s) * ((Y @ np.roll(X,s).T @ W) / ((Yhat @ np.roll(X,s).T @ W) + gradADA3 + eps))
+            uA = np.clip(uA,0.7071,1.4142)    
             A = np.clip(A * uA,0,A_max)
 
         # updating L
@@ -150,21 +151,28 @@ def NMF_ISRA_lag_fix_X(Y, A=None, X=None, W=None, S=0, A_max=2, A_min=1e-2, maxI
             for s in range(S_min,S_max+1):
                 uWnum = uWnum + (L==s) * (Y @ np.roll(X,s).T)
                 uWdenom = uWdenom + (L==s) * (Yhat @ np.roll(X,s).T)
-            W = np.clip(W * (A.T @ uWnum) / (A.T @ uWdenom),0,None) 
+            gradADA1 = 0.1*alpha_A*(IJx1 - 2*(A>1))
+            uW = np.identity(J)*np.clip((A.T @ uWnum) / (A.T @ (uWdenom + gradADA1)),0.9,1.1) 
+            A = np.clip(A @ np.linalg.inv(uW),0,A_max)
+            W = np.clip(W * uW,0,2) 
             
         if count%10 == 0: 
             norm_uA = np.linalg.norm((uA - 1)*A)
             norm_uL = np.linalg.norm((uL)*(L>S_min)*(L<S_max))
+            norm_uW = np.linalg.norm((uW-np.identity(J)))
             #print('norm_uA=%f  norm_uL=%f   at %i iteration' % (norm_uA,norm_uL,count) )
             if (norm_uA < convergence_threshold or abs(norm_uA/prev_norm_uA-1) < convergence_threshold) \
-                and (norm_uL < convergence_threshold or abs(norm_uL/prev_norm_uL-1) < convergence_threshold):
+                and (norm_uL < convergence_threshold or abs(norm_uL/prev_norm_uL-1) < convergence_threshold) \
+                and (norm_uW < convergence_threshold or abs(norm_uW/prev_norm_uW-1) < convergence_threshold):
                 if stage > 2:
                     converged = True
                     print('Converged at %i iterations' % count)
                 else:
                     stage = stage + 1    
+                    print('stage %i at iteration %i' % (stage, count))
             prev_norm_uA=norm_uA
             prev_norm_uL=norm_uL
+            prev_norm_uW=norm_uW
             
         count = count+1
         
