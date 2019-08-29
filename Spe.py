@@ -748,17 +748,20 @@ class Ens(TimeMatrix):
         """
         return Env(self.array[key,:], self.rate, delay=self.delay, tjust=self.tjust)
     
-    def dejitter(self, tlim=0.05, maxIter=20):
+    def dejitter(self, tlim=(-0.05,0.05), maxIter=1):
         """
         apply lateral displacements to de-jitter the signal against the median
         """
+        if len(tlim)==1:
+            tlim=(-abs(tlim),abs(tlim))
+        
         c=0
         sas=1
         while sas > 0 and c < maxIter:
             sas=0
             m = self.median()
             for i in range(self.shape[0]):
-                tmi=self.get_env(i).correlate(m,mode='full').crop(-0.05,0.05).time_max()
+                tmi=self.get_env(i).correlate(m,mode='full').crop(tlim[0],tlim[1]).time_max()
                 s=-int(round(tmi*self.rate))
                 sas = sas + abs(s)
                 self[i,:] = numpy.roll(self.array[i,:],shift=s,axis=0)
