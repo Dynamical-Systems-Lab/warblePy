@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-NMF.py module of WarblePy. 
+NMF.py module of WarblePy.
 
 Provides functions to perform Non-Negative Matrix Factorization
 
-Author: Alan Bush 
+Author: Alan Bush
 """
 
 #cargo paquetes estandar
@@ -15,20 +15,20 @@ class Error(Exception): pass
 
 def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
                  fit_A=None, fit_X=None, fit_L=None, \
-                 A_max=None, A_min=None, A_update_factor_lim=[0.7071,1.4142], 
+                 A_max=None, A_min=None, A_update_factor_lim=[0.7071,1.4142],
                  X_max=None, X_min=None, X_update_factor_lim=[0.7071,1.4142],
                  alpha_A=0, alpha_X=0,  \
                  maxIter=1000, convergence_threshold=1e-3):
     """
     Nonnegative Matrix Factorization (NMF) with lags.
-    Implemented using Lee-Seung type Image Space Reconstruction Algorithm (ISRA) 
-            
+    Implemented using Lee-Seung type Image Space Reconstruction Algorithm (ISRA)
+
     INPUT
-    Y - Matrix of I x T representing data 
+    Y - Matrix of I x T representing data
     A - Matrix of I x J representing weights of each gesture in each instance
     X - Matrix of J x T representing each gesture at each time
     L - Integer matrix of I x J repesenting 'lags' of each component in samples
-    
+
     S - number of Lag samples. If 2-tuple interpreted as (min, max)
     J - rank of the decomposition. Required if X is not given
 
@@ -42,27 +42,27 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
     X_min - minimal value to be considered different from zero after optimization
     A_update_factor_lim - list of length 2 given lower and upper bound for update factors
     X_update_factor_lim - list of length 2 given lower and upper bound for update factors
-    
-    alpha_A - sparsness parameter for A.  
-    alpha_X - sparsness parameter for A.  
-    
+
+    alpha_A - sparsness parameter for A.
+    alpha_X - sparsness parameter for A.
+
     maxIter - max number of iterations.
     convergence_threshold - fractional change of convergence between successive iterations
-       
+
     OUTPUT
-    A, X and L such that 
-    
-        D = 0.5*|| Y − Yhat||_2^2 + alpha_A*||A||_1 + alpha_X*||X||_1 
-    
+    A, X and L such that
+
+        D = 0.5*|| Y − Yhat||_2^2 + alpha_A*||A||_1 + alpha_X*||X||_1
+
     where
-    
+
         Yhat = sum(((L==s) * A) @ np.roll(X,s) for s in range(-S,S+1))
-    
+
     is minimized
-    
+
     RETURNS
     (A,X,L,Yhat,D)
-    
+
     This function was inspired by code by Anh Huy Phan anh Andrzej Cichocki 2008
     """
 
@@ -83,10 +83,10 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
         if J is None:
             J = J1
         elif J!=J1:
-            raise Error('J is inconsistent with shape of X')    
+            raise Error('J is inconsistent with shape of X')
         if fit_X is None:
             fit_X=False
-         
+
     if A is None:
         A = np.random.rand(I,J)
         if fit_A is None:
@@ -102,19 +102,19 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
             fit_A = False
 
     if L is None:
-        L = np.zeros((I,J),dtype=int)   
+        L = np.zeros((I,J),dtype=int)
         if fit_L is None:
             fit_L = True
     else:
         L = np.nan_to_num(L)
-        (I3,J3) = np.shape(L)    
+        (I3,J3) = np.shape(L)
         if J3 != J:
             raise Error("dimension of L inconsistent with J or X")
         if I3 != I:
             raise Error("dimension of L inconsistent with that of Y")
         if fit_L is None:
             fit_L = False
-    
+
     if len(S) == 1:
         S_min = int(-abs(S))
         S_max = int(abs(S))
@@ -122,13 +122,13 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
         S_min = int(S[0])
         S_max = int(S[1])
     else:
-        raise Error('S should have 1 or 2 elements')    
+        raise Error('S should have 1 or 2 elements')
 
     # Forcing Y to positive matrix
     eps = np.finfo(float).eps
     Y = np.nan_to_num(Y)
     Y[Y <= 0] = eps
-    X[X<=0] = eps 
+    X[X<=0] = eps
     A[A<=0] = eps
 
     dp1X = np.roll(X,+1)-X
@@ -137,35 +137,40 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
     M = IJx1 @ ((dp1X @ dp1X.T) * np.identity(J))
 
     count = 0
-    converged = False 
+    converged = False
     Dlast = np.inf
-    
+
     while count < maxIter and not converged:
-        
+
         #updating Yhat
         Yhat = np.zeros((I,T))
         for s in range(S_min,S_max+1):
             Yhat = Yhat + ((L==s)*A) @ np.roll(X,s,axis=1)
         D = 0.5*np.linalg.norm(Y-Yhat)**2
-        
+
         #updating A
         if fit_A:
-            uA = np.zeros((I,J))
+            #uA = np.zeros((I,J))
+            uAnum = np.zeros((I,J))
+            uAdenom = np.zeros((I,J))
             for s in range(S_min,S_max+1):
-                uA = uA + (L==s) * ((Y @ np.roll(X,s).T) / ((Yhat @ np.roll(X,s).T) + alpha_A + eps))
-            uA = np.clip(uA, A_update_factor_lim[0], A_update_factor_lim[1])    
+                #uA = uA + (L==s) * ((Y @ np.roll(X,s).T) / ((Yhat @ np.roll(X,s).T) + alpha_A + eps))
+                uAnum = uAnum + (L==s) * (Y @ np.roll(X,s).T)
+                uAdenom = uAdenom + (L==s) * (Yhat @ np.roll(X,s).T)
+            uA = uAnum / (uAdenom + alpha_A + eps)
+            uA = np.clip(uA, A_update_factor_lim[0], A_update_factor_lim[1])
             A = np.clip(A * uA,0,A_max)
 
         #updating X
         if fit_X:
             uXnum = np.zeros((J,T))
-            uXdenom = np.zeros((J,T)) 
+            uXdenom = np.zeros((J,T))
             for s in range(S_min,S_max+1):
                 uXnum = uXnum + ((L==s).T * A.T) @ np.roll(Y,-s)
                 uXdenom = uXdenom + ((L==s).T * A.T) @ np.roll(Yhat,-s)
             uX = uXnum / (uXdenom + alpha_X + eps)
-            uX = np.clip(uX, X_update_factor_lim[0], X_update_factor_lim[1]) 
-            X = np.clip(X * uX,0,X_max) 
+            uX = np.clip(uX, X_update_factor_lim[0], X_update_factor_lim[1])
+            X = np.clip(X * uX,0,X_max)
 
         # updating L
         if fit_L:
@@ -174,27 +179,25 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
             for s in range(S_min,S_max+1):
                 delta_Lp1_D_overA = delta_Lp1_D_overA + (L==s) * ((Y-Yhat) @ np.roll(dp1X,s).T)
                 delta_Lm1_D_overA = delta_Lm1_D_overA + (L==s) * ((Y-Yhat) @ np.roll(dm1X,s).T)
-            delta_Lp1_D_overA = -delta_Lp1_D_overA + 0.5*A*M     
-            delta_Lm1_D_overA = -delta_Lm1_D_overA + 0.5*A*M     
+            delta_Lp1_D_overA = -delta_Lp1_D_overA + 0.5*A*M
+            delta_Lm1_D_overA = -delta_Lm1_D_overA + 0.5*A*M
             uL =  np.sign(delta_Lm1_D_overA*(delta_Lm1_D_overA<0) - delta_Lp1_D_overA*(delta_Lp1_D_overA<0))
             L = np.clip(L + uL,S_min,S_max)
 
-            
+
         if (D < convergence_threshold or abs(D/Dlast-1) < convergence_threshold):
             converged = True
             print('Converged at %i iterations' % count)
-       
+
         Dlast=D
         count = count+1
-        
+
     if count == maxIter and not converged:
         print('Reached %i iterations without convergence' % maxIter)
-    
+
     if A_min is not None and fit_A:
         A[A<A_min] = 0
     if X_min is not None and fit_X:
         X[X<X_min] = 0
-        
-    return (A,X,L,Yhat,D)     
 
-
+    return (A,X,L,Yhat,D)
