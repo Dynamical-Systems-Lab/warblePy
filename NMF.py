@@ -13,6 +13,7 @@ import numpy as np
 
 class Error(Exception): pass
 
+
 def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
                  fit_A=None, fit_X=None, fit_L=None, \
                  A_max=None, A_min=None, A_update_factor_lim=[0.7071,1.4142],
@@ -131,8 +132,8 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
     X[X<=0] = eps
     A[A<=0] = eps
 
-    dp1X = np.roll(X,+1)-X
-    dm1X = np.roll(X,-1)-X
+    dp1X = roll0(X,+1)-X
+    dm1X = roll0(X,-1)-X
     IJx1 = np.ones((I,J))
     M = IJx1 @ ((dp1X @ dp1X.T) * np.identity(J))
 
@@ -145,7 +146,7 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
         #updating Yhat
         Yhat = np.zeros((I,T))
         for s in range(S_min,S_max+1):
-            Yhat = Yhat + ((L==s)*A) @ np.roll(X,s,axis=1)
+            Yhat = Yhat + ((L==s)*A) @ roll0(X,s,axis=1)
         D = 0.5*np.linalg.norm(Y-Yhat)**2
 
         #updating A
@@ -155,8 +156,8 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
             uAdenom = np.zeros((I,J))
             for s in range(S_min,S_max+1):
                 #uA = uA + (L==s) * ((Y @ np.roll(X,s).T) / ((Yhat @ np.roll(X,s).T) + alpha_A + eps))
-                uAnum = uAnum + (L==s) * (Y @ np.roll(X,s).T)
-                uAdenom = uAdenom + (L==s) * (Yhat @ np.roll(X,s).T)
+                uAnum = uAnum + (L==s) * (Y @ roll0(X,s).T)
+                uAdenom = uAdenom + (L==s) * (Yhat @ roll0(X,s).T)
             uA = uAnum / (uAdenom + alpha_A + eps)
             uA = np.clip(uA, A_update_factor_lim[0], A_update_factor_lim[1])
             A = np.clip(A * uA,0,A_max)
@@ -166,8 +167,8 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
             uXnum = np.zeros((J,T))
             uXdenom = np.zeros((J,T))
             for s in range(S_min,S_max+1):
-                uXnum = uXnum + ((L==s).T * A.T) @ np.roll(Y,-s)
-                uXdenom = uXdenom + ((L==s).T * A.T) @ np.roll(Yhat,-s)
+                uXnum = uXnum + ((L==s).T * A.T) @ roll0(Y,-s)
+                uXdenom = uXdenom + ((L==s).T * A.T) @ roll0(Yhat,-s)
             uX = uXnum / (uXdenom + alpha_X + eps)
             uX = np.clip(uX, X_update_factor_lim[0], X_update_factor_lim[1])
             X = np.clip(X * uX,0,X_max)
@@ -177,8 +178,8 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
             delta_Lp1_D_overA = np.zeros((I,J))
             delta_Lm1_D_overA = np.zeros((I,J))
             for s in range(S_min,S_max+1):
-                delta_Lp1_D_overA = delta_Lp1_D_overA + (L==s) * ((Y-Yhat) @ np.roll(dp1X,s).T)
-                delta_Lm1_D_overA = delta_Lm1_D_overA + (L==s) * ((Y-Yhat) @ np.roll(dm1X,s).T)
+                delta_Lp1_D_overA = delta_Lp1_D_overA + (L==s) * ((Y-Yhat) @ roll0(dp1X,s).T)
+                delta_Lm1_D_overA = delta_Lm1_D_overA + (L==s) * ((Y-Yhat) @ roll0(dm1X,s).T)
             delta_Lp1_D_overA = -delta_Lp1_D_overA + 0.5*A*M
             delta_Lm1_D_overA = -delta_Lm1_D_overA + 0.5*A*M
             uL =  np.sign(delta_Lm1_D_overA*(delta_Lm1_D_overA<0) - delta_Lp1_D_overA*(delta_Lp1_D_overA<0))
@@ -201,3 +202,30 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
         X[X<X_min] = 0
 
     return (A,X,L,Yhat,D)
+
+
+
+def roll0(a, shift):
+    """
+    Permute elements of matix a shifting them 'shift' places to the right.
+    Rightmot elements are discarded and the leftmost columns asigned to zero.
+    Use negative shifts to displace to the left.
+
+    INPUT
+    a - array_like, Input array.
+
+    shift - int, The number of places by which elements are shifted.
+
+    OUTPUT
+    res - ndarray, Output array, with the same shape as a.
+    """
+    if shift==0:
+        return(a)
+
+    res = np.roll(a,1,axis=1)
+    if shift>0
+        res[:,:shift] = 0
+    elif
+        res[:,shift:] = 0
+
+    return(res)
