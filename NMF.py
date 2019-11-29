@@ -155,7 +155,7 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
             uAnum = np.zeros((I,J))
             uAdenom = np.zeros((I,J))
             for s in range(S_min,S_max+1):
-                #uA = uA + (L==s) * ((Y @ np.roll(X,s).T) / ((Yhat @ np.roll(X,s).T) + alpha_A + eps))
+                #uA = uA + (L==s) * ((Y @ roll0(X,s).T) / ((Yhat @ roll0(X,s).T) + alpha_A + eps))
                 uAnum = uAnum + (L==s) * (Y @ roll0(X,s).T)
                 uAdenom = uAdenom + (L==s) * (Yhat @ roll0(X,s).T)
             uA = uAnum / (uAdenom + alpha_A + eps)
