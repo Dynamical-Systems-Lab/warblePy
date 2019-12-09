@@ -223,9 +223,9 @@ def roll0(a, shift):
         return(a)
 
     res = np.roll(a,1,axis=1)
-    if shift>0
+    if shift>0:
         res[:,:shift] = 0
-    elif
+    else:
         res[:,shift:] = 0
 
     return(res)

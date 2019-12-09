@@ -23,10 +23,10 @@ import matplotlib.pyplot
 import matplotlib.mlab
 import pandas
 import tempfile
-import warnings
-import numba
+#import warnings
+#import numba
 import collections
-import pdb
+#import pdb
 
 
 class Error(Exception): pass
@@ -202,7 +202,7 @@ class Wav(numpy.ndarray):
             if os.path.isfile(log_fname):
                 log_db=pandas.read_table(log_fname)
                 if any(log_db.file==file_name):
-                    row=log_db.ix[log_db.file==file_name]
+                    row=log_db.loc[log_db.file==file_name]
                     if norm_max is None:
                         norm_max=float(row.norm_max.iloc[0])
                     if norm_min is None:
@@ -362,7 +362,7 @@ class Wav(numpy.ndarray):
                 log_db=pandas.DataFrame(columns=['file','norm_max','norm_min','norm_factor','delay','tjust','channel']) 
 
             if any(log_db.file==fname):
-                log_db.ix[log_db.file==fname,['norm_max','norm_min','norm_factor','delay','tjust','channel']]=\
+                log_db.loc[log_db.file==fname,['norm_max','norm_min','norm_factor','delay','tjust','channel']]=\
                     [maxabs,-maxabs,norm_factor,self.delay,self.tjust,self.channel]
             else:
                 log_db.loc[len(log_db)]=[fname,maxabs,-maxabs,norm_factor,self.delay,self.tjust,self.channel]
@@ -995,14 +995,14 @@ class Wav(numpy.ndarray):
             delay=0
         return Cor(r,self.rate,delay=delay)    
             
-    def _correlate_pearson_numba(self, template):
-        template = template.view(numpy.ndarray)
-        std_template=numpy.std(template)
-        if std_template > numpy.finfo(float).eps:
-            norm_x1 = (template - numpy.mean(template))/std_template
-            return Cor(_correlate1D(norm_x1,self.array),self.rate,tjust=self.tjust)
-        else:
-            return Cor.zeros(samples=self.samples - len(template) + 1,rate=self.rate,tjust=self.tjust) 
+#    def _correlate_pearson_numba(self, template):
+#        template = template.view(numpy.ndarray)
+#        std_template=numpy.std(template)
+#        if std_template > numpy.finfo(float).eps:
+#            norm_x1 = (template - numpy.mean(template))/std_template
+#            return Cor(_correlate1D(norm_x1,self.array),self.rate,tjust=self.tjust)
+#        else:
+#            return Cor.zeros(samples=self.samples - len(template) + 1,rate=self.rate,tjust=self.tjust) 
 
     def cor(self,to):
         """
@@ -1701,32 +1701,32 @@ class WavPromise(Promise):
         return self
         
         
-@numba.jit('f8[:](f8[:],f8[:])',nopython=True)
-def _correlate1D(x1n,x2):
-    """
-    Private function to implement 1D correlation using numba    
-    """
-    n1 = len(x1n)
-    n2 = len(x2)
-    r = numpy.empty(n2-n1+1)
-
-    for j in range(n2-n1+1):
-        mean_x2j = 0
-        for i in range(n1):
-            mean_x2j += x2[i+j]
-        mean_x2j /= n1
-
-        std_x2j = 0
-        for i in range(n1):
-            std_x2j += (x2[i+j]-mean_x2j)**2
-        std_x2j = numpy.sqrt(std_x2j/n1)
-        
-        ncp = 0
-        for i in range(n1):
-            ncp += x1n[i] * (x2[i+j]-mean_x2j)/std_x2j
-        r[j] = ncp/n1       
-
-    return r
+#@numba.jit('f8[:](f8[:],f8[:])',nopython=True)
+#def _correlate1D(x1n,x2):
+#    """
+#    Private function to implement 1D correlation using numba    
+#    """
+#    n1 = len(x1n)
+#    n2 = len(x2)
+#    r = numpy.empty(n2-n1+1)
+#
+#    for j in range(n2-n1+1):
+#        mean_x2j = 0
+#        for i in range(n1):
+#            mean_x2j += x2[i+j]
+#        mean_x2j /= n1
+#
+#        std_x2j = 0
+#        for i in range(n1):
+#            std_x2j += (x2[i+j]-mean_x2j)**2
+#        std_x2j = numpy.sqrt(std_x2j/n1)
+#        
+#        ncp = 0
+#        for i in range(n1):
+#            ncp += x1n[i] * (x2[i+j]-mean_x2j)/std_x2j
+#        r[j] = ncp/n1       
+#
+#    return r
     
 from Spe import Spe, CorSpe        
         

@@ -108,7 +108,7 @@ class TimeMatrix(numpy.ndarray):
         fn_npz = filename + ".npz"
         if not os.path.isfile(fn_npz):
             raise Error("File "+ fn_npz + " not found.")
-        npz=numpy.load(fn_npz)
+        npz=numpy.load(fn_npz,allow_pickle=True)
         output=cls(npz['array'],y=npz['y'],times=npz['times'],tjust=npz['tjust'])
         
         fn_dat = filename + "_db.dat"
@@ -419,7 +419,7 @@ class TimeMatrix(numpy.ndarray):
             nanrows=numpy.isnan(self.array).any(axis=1)
             output = type(self)(self.array[~nanrows,:],y=self.y[~nanrows],times=self.times,tjust=self.tjust)
             if self.db is not None:
-                output.db = self.db.ix[~nanrows]
+                output.db = self.db.loc[~nanrows]
             return output                        
         elif axis==0:
             raise Error("axis=0 not implemented yet")
@@ -675,7 +675,7 @@ class Ens(TimeMatrix):
         for col in kwargs:
             df[col]=kwargs[col]
         if db_cols is not None:
-            df=df.join(self.db.ix[:,db_cols],on=['record_id','annot_id'])
+            df=df.join(self.db.loc[:,db_cols],on=['record_id','annot_id'])
         return df
 
     def sample(self, N=1, replace=False):
@@ -696,7 +696,7 @@ class Ens(TimeMatrix):
         elements=numpy.random.choice(self.shape[0],size=N,replace=replace)
         output = type(self)(self.array[elements,:],y=self.y[elements],times=self.times,tjust=self.tjust)
         if self.db is not None:
-            output.db = self.db.ix[elements]
+            output.db = self.db.loc[elements]
         return output   
      
     def bootstrap_resample(self):
@@ -724,7 +724,7 @@ class Ens(TimeMatrix):
             if type(select)==str: 
                 sdb=self.db.query(select, **kwargs).copy()
             else:
-                sdb=self.db.ix[select,:].copy()
+                sdb=self.db.loc[select,:].copy()
                 
         sa=self.db.index.isin(sdb.index)
         output = type(self)(self.array[sa,:],y=self.y[sa],times=self.times,tjust=self.tjust)

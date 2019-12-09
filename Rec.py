@@ -339,7 +339,7 @@ class Rec(collections.abc.MutableMapping):
                 if isinstance(select,str):
                     sel_db=self.annot[annot].copy().query(select)        
                 elif isinstance(select,pandas.Series):
-                    sel_db=self.annot[annot].copy().ix[select,:]        
+                    sel_db=self.annot[annot].copy().loc[select,:]        
                 else:
                     raise Error("Invalid type for select")
             else:
@@ -362,7 +362,7 @@ class Rec(collections.abc.MutableMapping):
         else:
             raise Error("annot should be a string or pandas.Series")
 
-        annot={i:self.annot[i].copy().ix[(self.annot[i].start<annot_info.end) & (self.annot[i].end>annot_info.start)]\
+        annot={i:self.annot[i].copy().loc[(self.annot[i].start<annot_info.end) & (self.annot[i].end>annot_info.start)]\
                    for i in self.annot}
            
         if not isinstance(flanking, tuple):
@@ -399,7 +399,7 @@ class Rec(collections.abc.MutableMapping):
             if type(select)==str: 
                 db.query(select,inplace=True, **kwargs)
             else:
-                db=db.ix[select,:]
+                db=db.loc[select,:]
         return ann_iter(self,db,annot_type,flanking)
         
     def to_dataframe(self,times=None,**kwargs):

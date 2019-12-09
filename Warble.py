@@ -112,7 +112,8 @@ class Warble(collections.abc.Sequence):
         time_nstr=record_db.time.str.replace("[^0-9]","",-1)
         record_db.insert(0,'record_id',date_nstr.str.cat(time_nstr).astype(numpy.int64))
         record_db.sort_values('record_id',inplace=True)        
-        record_db.set_index('record_id',drop=False,inplace=True,verify_integrity=True)
+        record_db.set_index('record_id',drop=False,inplace=True,verify_integrity=True)        
+        record_db.index.rename('record_idx',inplace=True)
         
         file_db=pandas.concat(wav_df_list,ignore_index=True) 
         
@@ -158,7 +159,6 @@ class Warble(collections.abc.Sequence):
             #deleting columns copied to file_db from record_db
             del record_db['ch_'+ch+'_file']
             for var in ch_vars: del record_db[var]
-        record_db.set_index('record_id',drop=False,inplace=True,verify_integrity=True)
 
         file_data=pandas.concat(file_data_list,ignore_index=True)
         file_data['file_id']=file_data['file_id'].astype(numpy.int32)
@@ -167,15 +167,17 @@ class Warble(collections.abc.Sequence):
         file_data.set_index('file_id',drop=True,inplace=True,verify_integrity=True)
         file_db.set_index('file_id',drop=False,inplace=True,verify_integrity=True)
         file_db=file_db.join(file_data)
+        file_db.index.rename('file_idx',inplace=True)
 
-        file_db_na_channel=file_db.ix[file_db.channel.isnull(),('file','folder')]
+        file_db_na_channel=file_db.loc[file_db.channel.isnull(),('file','folder')]
         if len(file_db_na_channel) > 0 and not allow_unknown_channels:
             print("\nRemoving registers with unknown channel from files_db")
             print(file_db_na_channel)
             file_db.dropna(axis=0,subset=['channel'],inplace=True) 
 
-        record_db.sort_values('record_id',inplace=True)        
+        record_db.sort_values('record_id',axis=0,inplace=True)                
         record_db.set_index('record_id',drop=False,inplace=True,verify_integrity=True)
+        record_db.index.rename('record_idx',inplace=True)
         return cls(record_db,file_db,lazy_load=lazy_load,preprocess=preprocess)
         
             
@@ -191,9 +193,9 @@ class Warble(collections.abc.Sequence):
         returns the modified warble object
         """
         warnings.warn("Deprecated function. Use Warble.add_file_info instead")
-        file_info=self.file_db.ix[self.file_db.channel==channel,("file_id",column)]
+        file_info=self.file_db.loc[self.file_db.channel==channel,("file_id",column)]
         file_info.rename(columns={'file':'ch_'+channel+'_'+column,'file_id':'ch_'+channel+'_id'},inplace=True)
-        file_info.set_index('ch_'+channel+'_id',inplace=True,drop=False)
+        file_info.set_index('ch_'+channel+'_id',inplace=True,drop=True)
         self.record_db=pandas.merge(self.record_db,file_info,how='left',on='ch_'+channel+'_id',right_index=True)
         return self.invisible()
 
@@ -214,13 +216,14 @@ class Warble(collections.abc.Sequence):
         if prefix is True:
             new='ch_'+channel+'_'+column
             
-        file_info=self.file_db.ix[self.file_db.channel==channel,("file_id",column)]
+        file_info=self.file_db.loc[self.file_db.channel==channel,("file_id",column)]
         file_info.rename(columns={column:new,'file_id':'ch_'+channel+'_id'},inplace=True)
-        file_info.set_index('ch_'+channel+'_id',inplace=True,drop=False)
+        file_info.set_index('ch_'+channel+'_id',inplace=True,drop=True)
      
         new_in_record_db=new in self.record_db.columns.values
         if new_in_record_db:
             del self.record_db[new]
+        
         self.record_db=pandas.merge(self.record_db,file_info,how='left',on='ch_'+channel+'_id',right_index=True)
 
         if to in self.annot:
@@ -265,7 +268,7 @@ class Warble(collections.abc.Sequence):
         #registering files of the new channel
         for nf in mapping_db[cols[1]].dropna().unique():
             #nf=mapping_db[cols[1]].dropna().unique()[0]
-            f_db=self.file_db.ix[self.file_db.file==nf]
+            f_db=self.file_db.loc[self.file_db.file==nf]
             if len(f_db) == 0:
                 raise Error("attempting to register file "+nf+" not present in the Warble object")
             self.add_file(f_db.path.iloc[0],f_db.folder.iloc[0],f_db.file.iloc[0],channel=ch2)
@@ -274,7 +277,7 @@ class Warble(collections.abc.Sequence):
         if any(mdb.groupby('ch_'+ch1+'_id').apply(lambda df: len(df['ch_'+ch1+'_id'].unique()))>1):
             raise Error("ambiguous mapping_db")
         mdb=mdb.groupby('ch_'+ch1+'_id').apply(lambda df: df.iloc[0])
-        mdb.set_index('ch_'+ch1+'_id',inplace=True,verify_integrity=True)
+        mdb.set_index('ch_'+ch1+'_id',inplace=True,verify_integrity=True,drop=True)
         
         if 'ch_'+ch2+'_id' in self.record_db.columns:
             del self.record_db['ch_'+ch2+'_id']
@@ -282,6 +285,7 @@ class Warble(collections.abc.Sequence):
         if copy_delays: 
             self.record_db['ch_'+ch2+'_delay']=self.record_db['ch_'+ch1+'_delay']
         self.record_db.set_index('record_id',drop=False,inplace=True,verify_integrity=True)
+        self.record_db.index.rename('record_idx',inplace=True)
         return self.invisible()
         
     def add_file(self, path, folder, file, channel, log="_warble-normalization.dat"):
@@ -303,8 +307,8 @@ class Warble(collections.abc.Sequence):
             if os.path.isfile(log_fname):
                 log_db=pandas.read_table(log_fname)
                 if any(log_db.file==file):
-                    max_=log_db.ix[log_db.file==file].norm_max.iloc[0]
-                    min_=log_db.ix[log_db.file==file].norm_min.iloc[0]
+                    max_=log_db.loc[log_db.file==file].norm_max.iloc[0]
+                    min_=log_db.loc[log_db.file==file].norm_min.iloc[0]
                 
         fname=os.path.join(path,folder,file)
         if not os.path.isfile(fname): raise Error("file not found")
@@ -321,9 +325,10 @@ class Warble(collections.abc.Sequence):
             fdict['file_id']=self.file_db.file_id.max()+1
             self.file_db=self.file_db.append(fdict,ignore_index=True)          
         elif n_match==1: #existing entry
-            idx=self.file_db.ix[self.file_db.file==file].index
+            #idx=self.file_db.loc[self.file_db.file==file].index
             for col in fdict:
-                self.file_db=self.file_db.set_value(idx,col,fdict[col])
+                #self.file_db=self.file_db.set_value(idx,col,fdict[col])
+                self.file_db.at[self.file_db.file==file,col] = fdict[col]
         else:
             raise Error(file + " found " + str(n_match) + "on file_db. Filenames should be unique." )
 
@@ -343,7 +348,7 @@ class Warble(collections.abc.Sequence):
             mo=re.match('ch_(.*)_file',col)
             if mo is not None:
                 ch=mo.group(1)
-                df=df.merge(self.file_db.ix[self.file_db.channel==ch,('file_id','file')],left_on=col,right_on="file",how='left')
+                df=df.merge(self.file_db.loc[self.file_db.channel==ch,('file_id','file')],left_on=col,right_on="file",how='left')
                 df.drop('file', axis=1, inplace=True)
                 df.rename(columns={'file_id':'ch_'+ch+'_id'},inplace=True)  
                 df.drop(col, axis=1, inplace=True)
@@ -382,7 +387,7 @@ class Warble(collections.abc.Sequence):
             if type(select)==str: 
                 by_db.query(select,inplace=True, **kwargs)
             else:
-                by_db=by_db.ix[select,:]
+                by_db=by_db.loc[select,:]
         #filtering record_sb and annot DataFrames
         output.record_db=output.record_db.loc[output.record_db.record_id.isin(by_db.record_id)]
         for annot_type in output.annot:
@@ -529,6 +534,7 @@ class Warble(collections.abc.Sequence):
         annot_db.sort_values(['record_id','annot_id'],inplace=True) 
         annot_db['comment'] = annot_db['comment'].astype(str)
         annot_db.set_index(['record_id','annot_id'],drop=False,inplace=True,verify_integrity=True)
+        annot_db.index.rename(['record_idx','annot_idx'],inplace=True)
         annot_db['duration']=annot_db['end']-annot_db['start']
         if 'datetime' in annot_db.columns:
             del annot_db['datetime']
@@ -605,7 +611,7 @@ class Warble(collections.abc.Sequence):
                     if isinstance(select,str):
                         sel_db=self.annot[annot].copy().query(select)        
                     elif isinstance(select,pandas.Series):
-                        sel_db=self.annot[annot].copy().ix[select,:]        
+                        sel_db=self.annot[annot].copy().loc[select,:]        
                     else:
                         raise Error("Invalid type for select")
                 else:
@@ -626,7 +632,7 @@ class Warble(collections.abc.Sequence):
 
                 if record_id is None:
                     #checking if record_id is well determined by annot_id
-                    sel_annot_db=sel_db.ix[sel_db.annot_id==annot_id,:]
+                    sel_annot_db=sel_db.loc[sel_db.annot_id==annot_id,:]
                     if len(sel_annot_db)==1:
                         record_id=sel_annot_db.iloc[0].record_id   
                     else:
@@ -822,7 +828,7 @@ class Warble(collections.abc.Sequence):
             if type(select)==str: 
                 db.query(select,inplace=True, **kwargs)
             else:
-                db=db.ix[select,:]
+                db=db.loc[select,:]
         if _select is not None and len(db)>0:
             db.query(_select,inplace=True, **kwargs)
         return ann_iter_warble(self,db,annot_type,flanking)
@@ -951,6 +957,7 @@ class Warble(collections.abc.Sequence):
         annot_db.sort_values(['record_id','start'],inplace=True) 
         annot_db['annot_id']=annot_db.groupby('record_id')['annot_id'].transform(lambda x:numpy.arange(len(x)))
         annot_db.set_index(['record_id','annot_id'],drop=False,inplace=True,verify_integrity=True)
+        annot_db.index.rename(['record_idx','annot_idx'],inplace=True)
         
         if annotate is not None:
             return self.annot_register(annotate,annot_db).invisible()
@@ -1078,6 +1085,7 @@ class Warble(collections.abc.Sequence):
         new_consolidated_db=Annotate.consolidate(annot_db,when,additive)
         consolidated_db=pandas.concat([consolidated_db,new_consolidated_db],ignore_index=True)
         consolidated_db.set_index(['record_id','annot_id'],drop=False,inplace=True,verify_integrity=True)
+        consolidated_db.index.rename(['record_idx','annot_idx'],inplace=True)
         
         if annotate is not None:
             return self.annot_register(annotate,consolidated_db).invisible()
@@ -1224,7 +1232,7 @@ class Warble(collections.abc.Sequence):
             if type(select)==str: 
                 db.query(select,inplace=True)
             else:
-                db=db.ix[select,:]       
+                db=db.loc[select,:]       
  
         #selectiong times of annotation of longest duration     
         #rid,aid=db.duration.idxmax()        
