@@ -370,6 +370,7 @@ class Warble(collections.abc.Sequence):
         **kwargs
             Further arguments for pandas.DataFrame.query
         """
+
         #dealing with inplace
         if inplace:
             output=self
@@ -387,9 +388,12 @@ class Warble(collections.abc.Sequence):
             if type(select)==str: 
                 by_db.query(select,inplace=True, **kwargs)
             else:
-                by_db=by_db.loc[select,:]
-        #filtering record_sb and annot DataFrames
-        output.record_db=output.record_db.loc[output.record_db.record_id.isin(by_db.record_id)]
+                by_db=by_db.loc[select]
+                      
+        #filtering record_db and annot DataFrames
+        criteria = output.record_db.record_id.isin(by_db.record_id)
+        output.record_db=output.record_db.loc[criteria]
+        
         for annot_type in output.annot:
             output.annot[annot_type]=output.annot[annot_type].loc[output.annot[annot_type].record_id.isin(by_db.record_id)]
 
@@ -1234,12 +1238,9 @@ class Warble(collections.abc.Sequence):
             else:
                 db=db.loc[select,:]       
  
-        #selectiong times of annotation of longest duration     
-        #rid,aid=db.duration.idxmax()        
-        #max_dur_wav=get(self.get_annot(annot,record_id=rid,annot_id=aid,flanking=flanking)).set_delay(set_delay)
-        #times=max_dur_wav.get_times()
         ens_list=[get(ann).set_delay(set_delay) for \
                       ann in progressbar(self.iter_annot(annot,select=select,flanking=flanking))]
+ 
         ens_duration=[ens_v.duration for ens_v in ens_list]
         max_dur_wav=ens_list[ens_duration.index(max(ens_duration))]
         times=max_dur_wav.get_times() 
@@ -1379,18 +1380,23 @@ def progressbar(iter_):
     """
     i=1; N_pts=0
     N=len(iter_)
+    if N==0:
+        return
     N_pb=int(math.ceil(N/100))
     msg="\n| 0% - Calculating "+str(N)+" values"
     print(msg+" "*(94-len(msg))+"100% |",end="\n",flush=False)
     yield next(iter_)
     while True:
-        i+=1
-        if i%N_pb==0:
-            N_new=int(math.floor(100*i/N)-N_pts)
-            print('\b',"."*N_new,sep="",end=" ",flush=N_pts>5)
-            N_pts+=N_new
-        if i==N-1:
-            print(end="\n",flush=True)
-        yield next(iter_)
+        try:
+            i+=1
+            if i%N_pb==0:
+                N_new=int(math.floor(100*i/N)-N_pts)
+                print('\b',"."*N_new,sep="",end=" ",flush=N_pts>5)
+                N_pts+=N_new
+            if i==N-1:
+                print(end="\n",flush=True)
+            yield next(iter_)
+        except StopIteration:
+            return
 
     
