@@ -81,6 +81,8 @@ class Warble(collections.abc.Sequence):
         #loading logs and wavs to pandas data frames
         log_df_list=[]
         wav_df_list=[]
+        log_path_list=[]
+        wav_path_list=[]
         print("Loading folders:")
         for path in paths:
             #path = paths[0]
@@ -93,13 +95,19 @@ class Warble(collections.abc.Sequence):
                         logs=fnmatch.filter(os.listdir(entry.path),log_files)
                         wavs=fnmatch.filter(os.listdir(entry.path),wav_files)
                         for log in logs:
+                            log_path_list.append(entry.name)
                             log_df=pandas.read_table(os.path.join(entry.path,log))        
                             log_df_list.append(log_df)
                             has_log=True
-                        if (not log_required or has_log) and (len(wavs)>1):       
+                        if (not log_required or has_log) and (len(wavs)>1):  
+                            wav_path_list.append(entry.name)
                             wav_df=pandas.DataFrame({'path':path,'folder':entry.name,'file':wavs})
                             wav_df_list.append(wav_df)
-            
+
+        #sorting alphabetically
+        log_df_list=[x for _,x in sorted(zip(log_path_list,log_df_list))]
+        wav_df_list=[x for _,x in sorted(zip(wav_path_list,wav_df_list))]
+        
         #consolidating record_db and file_db        
         record_db=pandas.concat(log_df_list,ignore_index=True)    
         #record_db.sort_values(['date','time'],inplace=True)
