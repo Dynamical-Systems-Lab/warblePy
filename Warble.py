@@ -102,6 +102,7 @@ class Warble(collections.abc.Sequence):
                         if (not log_required or has_log) and (len(wavs)>1):  
                             wav_path_list.append(entry.name)
                             wav_df=pandas.DataFrame({'path':path,'folder':entry.name,'file':wavs})
+                            wav_df.sort_values('file',inplace=True)
                             wav_df_list.append(wav_df)
 
         #sorting alphabetically
@@ -153,7 +154,7 @@ class Warble(collections.abc.Sequence):
         for ch in channels:
             #i_ch=iter(channels)
             #ch = next(i_ch)
-            ch_file_db=file_db[['file_id','file']].rename(columns={'file_id':'ch_'+ch+'_id','file':'ch_'+ch+'_file'})                       
+            ch_file_db=file_db[['file_id','file']].rename(columns={'file_id':'ch_'+ch+'_id','file':'ch_'+ch+'_file'})    
             record_db=record_db.merge(ch_file_db,on='ch_'+ch+'_file',how='left',copy=False)
             ch_vars=set(record_db.columns).intersection(set(['ch_'+ch+'_'+var for var in ['min','max']]))
             file_data=record_db.loc[pandas.notnull(record_db['ch_'+ch+'_id']),['ch_'+ch+'_id']+list(ch_vars)]
@@ -165,27 +166,28 @@ class Warble(collections.abc.Sequence):
             file_data=file_data[['file_id','channel','min','max']]
             file_data_list.append(file_data)
             #deleting columns copied to file_db from record_db
-            del record_db['ch_'+ch+'_file']
-            for var in ch_vars: del record_db[var]
+            #del record_db['ch_'+ch+'_file']
+            #for var in ch_vars: del record_db[var]
 
         file_data=pandas.concat(file_data_list,ignore_index=True)
         file_data['file_id']=file_data['file_id'].astype(numpy.int32)
         file_data.drop_duplicates(subset='file_id',inplace=True)
         
         file_data.set_index('file_id',drop=True,inplace=True,verify_integrity=True)
+        file_data.index.rename('file_idx',inplace=True)
         file_db.set_index('file_id',drop=False,inplace=True,verify_integrity=True)
-        file_db=file_db.join(file_data)
         file_db.index.rename('file_idx',inplace=True)
-
+        file_db=file_db.join(file_data,on='file_idx',how='left')
+        
         file_db_na_channel=file_db.loc[file_db.channel.isnull(),('file','folder')]
         if len(file_db_na_channel) > 0 and not allow_unknown_channels:
             print("\nRemoving registers with unknown channel from files_db")
             print(file_db_na_channel)
             file_db.dropna(axis=0,subset=['channel'],inplace=True) 
 
-        record_db.sort_values('record_id',axis=0,inplace=True)                
-        record_db.set_index('record_id',drop=False,inplace=True,verify_integrity=True)
-        record_db.index.rename('record_idx',inplace=True)
+        #record_db.sort_values('record_id',axis=0,inplace=True)                
+        #record_db.set_index('record_id',drop=False,inplace=True,verify_integrity=True)
+        #record_db.index.rename('record_idx',inplace=True)
         return cls(record_db,file_db,lazy_load=lazy_load,preprocess=preprocess)
         
             
@@ -220,19 +222,21 @@ class Warble(collections.abc.Sequence):
         
         returns the modified warble object
         """
+        
         new=column
         if prefix is True:
             new='ch_'+channel+'_'+column
             
-        file_info=self.file_db.loc[self.file_db.channel==channel,("file_id",column)]
+        file_info=self.file_db.loc[self.file_db.channel==channel,("file_id",column)].copy()
         file_info.rename(columns={column:new,'file_id':'ch_'+channel+'_id'},inplace=True)
-        file_info.set_index('ch_'+channel+'_id',inplace=True,drop=True)
+        file_info.set_index('ch_'+channel+'_id',inplace=True,drop=False)
+        file_info.index.rename('ch_'+channel+'_idx',inplace=True)
      
         new_in_record_db=new in self.record_db.columns.values
         if new_in_record_db:
             del self.record_db[new]
         
-        self.record_db=pandas.merge(self.record_db,file_info,how='left',on='ch_'+channel+'_id',right_index=True)
+        self.record_db=pandas.merge(self.record_db,file_info,how='left',on='ch_'+channel+'_id')
 
         if to in self.annot:
             if new in self.annot[to].columns.values:
