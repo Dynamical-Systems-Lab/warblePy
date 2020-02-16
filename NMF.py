@@ -3,16 +3,14 @@
 """
 NMF.py module of WarblePy.
 
-Provides functions to perform Non-Negative Matrix Factorization
+Provides functions to perform lagged Non-Negative Matrix Factorization
 
 Author: Alan Bush
 """
 
-#cargo paquetes estandar
 import numpy as np
 
 class Error(Exception): pass
-
 
 def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
                  fit_A=None, fit_X=None, fit_L=None, \
@@ -28,7 +26,7 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
     Y - Matrix of I x T representing data
     A - Matrix of I x J representing weights of each gesture in each instance
     X - Matrix of J x T representing each gesture at each time
-    L - Integer matrix of I x J repesenting 'lags' of each component in samples
+    L - Integer matrix of I x J repesenting 'lags' of each component in number of samples
 
     S - number of Lag samples. If 2-tuple interpreted as (min, max)
     J - rank of the decomposition. Required if X is not given
@@ -53,7 +51,7 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
     OUTPUT
     A, X and L such that
 
-        D = 0.5*|| Y − Yhat||_2^2 + alpha_A*||A||_1 + alpha_X*||X||_1
+        D = 0.5*||Y − Yhat||_2^2 + alpha_A*||A||_1 + alpha_X*||X||_1
 
     where
 
@@ -146,7 +144,7 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
         #updating Yhat
         Yhat = np.zeros((I,T))
         for s in range(S_min,S_max+1):
-            Yhat = Yhat + ((L==s)*A) @ roll0(X,s,axis=1)
+            Yhat = Yhat + ((L==s)*A) @ roll0(X,s)
         D = 0.5*np.linalg.norm(Y-Yhat)**2
 
         #updating A
@@ -155,7 +153,6 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
             uAnum = np.zeros((I,J))
             uAdenom = np.zeros((I,J))
             for s in range(S_min,S_max+1):
-                #uA = uA + (L==s) * ((Y @ roll0(X,s).T) / ((Yhat @ roll0(X,s).T) + alpha_A + eps))
                 uAnum = uAnum + (L==s) * (Y @ roll0(X,s).T)
                 uAdenom = uAdenom + (L==s) * (Yhat @ roll0(X,s).T)
             uA = uAnum / (uAdenom + alpha_A + eps)
@@ -208,7 +205,7 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
 def roll0(a, shift):
     """
     Permute elements of matix a shifting them 'shift' places to the right.
-    Rightmot elements are discarded and the leftmost columns asigned to zero.
+    Rightmost elements are discarded and the leftmost columns asigned to zero.
     Use negative shifts to displace to the left.
 
     INPUT

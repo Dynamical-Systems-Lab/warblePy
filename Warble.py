@@ -544,7 +544,7 @@ class Warble(collections.abc.Sequence):
         if not set(col_names).issubset(annot_db.columns):
             raise Error("columns 'record_id','annot_id','start','end' should be present in annot_db")
         if not 'comment' in annot_db.columns:
-            annot_db['comment']=""
+            annot_db.loc[:,'comment']=""
         annot_db=annot_db.dropna(axis=0,subset=['annot_id']).copy()
         annot_db[['record_id','annot_id']] = annot_db[['record_id','annot_id']].astype(numpy.int64)
         annot_db.sort_values(['record_id','annot_id'],inplace=True) 
