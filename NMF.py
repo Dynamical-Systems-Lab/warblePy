@@ -16,7 +16,7 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
                  fit_A=None, fit_X=None, fit_L=None, \
                  A_max=None, A_min=None, A_update_factor_lim=[0.7071,1.4142],
                  X_max=None, X_min=None, X_update_factor_lim=[0.7071,1.4142],
-                 alpha_A=0, alpha_X=0,  \
+                 alpha_A=0, alpha_X=0, alpha_L=0,  \
                  maxIter=1000, convergence_threshold=1e-3):
     """
     Nonnegative Matrix Factorization (NMF) with lags.
@@ -43,7 +43,8 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
     X_update_factor_lim - list of length 2 given lower and upper bound for update factors
 
     alpha_A - sparsness parameter for A.
-    alpha_X - sparsness parameter for A.
+    alpha_X - sparsness parameter for X.
+    alpha_L - smoothness parameter for L.
 
     maxIter - max number of iterations.
     convergence_threshold - fractional change of convergence between successive iterations
@@ -134,6 +135,12 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
     dm1X = roll0(X,-1)-X
     IJx1 = np.ones((I,J))
     M = IJx1 @ ((dp1X @ dp1X.T) * np.identity(J))
+    G = 2 * np.identity(J) - roll0(np.identity(J),+1) - roll0(np.identity(J),-1)
+    G[0,0]=1
+    G[J-1,J-1]=1
+    H = np.ones((I,J))
+    H[:,0]=1/2
+    H[:,J-1]=1/2
 
     count = 0
     converged = False
@@ -177,11 +184,10 @@ def NMF_ISRA_lag(Y, A=None, X=None, L=None, S=0, J=None, \
             for s in range(S_min,S_max+1):
                 delta_Lp1_D_overA = delta_Lp1_D_overA + (L==s) * ((Y-Yhat) @ roll0(dp1X,s).T)
                 delta_Lm1_D_overA = delta_Lm1_D_overA + (L==s) * ((Y-Yhat) @ roll0(dm1X,s).T)
-            delta_Lp1_D_overA = -delta_Lp1_D_overA + 0.5*A*M
-            delta_Lm1_D_overA = -delta_Lm1_D_overA + 0.5*A*M
-            uL =  np.sign(delta_Lm1_D_overA*(delta_Lm1_D_overA<0) - delta_Lp1_D_overA*(delta_Lp1_D_overA<0))
+            delta_Lp1_D = -A*delta_Lp1_D_overA + 0.5*A*A*M + alpha_L*(H + L @ G)
+            delta_Lm1_D = -A*delta_Lm1_D_overA + 0.5*A*A*M + alpha_L*(H - L @ G)
+            uL =  np.sign(delta_Lm1_D*(delta_Lm1_D<0) - delta_Lp1_D*(delta_Lp1_D<0))
             L = np.clip(L + uL,S_min,S_max)
-
 
         if (D < convergence_threshold or abs(D/Dlast-1) < convergence_threshold):
             converged = True
@@ -219,7 +225,7 @@ def roll0(a, shift):
     if shift==0:
         return(a)
 
-    res = np.roll(a,1,axis=1)
+    res = np.roll(a,shift,axis=1)
     if shift>0:
         res[:,:shift] = 0
     else:
