@@ -117,8 +117,10 @@ class TimeMatrix(numpy.ndarray):
             if "record_id" in output.db.columns:
                 if "annot_id" in output.db.columns:
                     output.db.set_index(['record_id','annot_id'],inplace=True,drop=False)
+                    output.db.index.rename(['record_idx','annot_idx'],inplace=True)
                 else:
                     output.db.set_index(['record_id'],inplace=True,drop=False)
+                    output.db.index.rename(['record_idx'],inplace=True)
 
         output.method="read"
         output.method_args={'filename':filename,'path':path}
@@ -351,7 +353,8 @@ class TimeMatrix(numpy.ndarray):
             end = self.end
         times=self.times
         start_idx=int(math.floor(self.rate*(start-self.start)))
-        end_idx=int(math.floor(self.rate*(end-self.start)))
+        #end_idx=int(round(self.rate*(end-self.start)))
+        end_idx=start_idx + int(round(self.rate*(end-start)))
         if start_idx < 0:
             pre=numpy.linspace(self.start+start_idx/self.rate+self.tjust/self.rate,self.start+self.tjust/self.rate,-start_idx,endpoint=False)    
             times=numpy.append(pre,times)
@@ -560,7 +563,7 @@ class Ens(TimeMatrix):
 
         y=tup[0].y
         for i in range(1,len(tup)):
-            y = y.append(tup[i].y)
+            y = numpy.append(y,tup[i].y)
         output = cls(numpy.vstack(ens.array for ens in tup), y, times, tjust=tjust)        
         output.db=pandas.concat((ens.db for ens in tup if ens.db is not None),axis=0,ignore_index=True)
         return output
@@ -731,6 +734,25 @@ class Ens(TimeMatrix):
         output.db = sdb
         return output         
         
+    def sort(self, by, ascending=True):
+        """
+        Returns a sorted version of the ensemble
+        
+        by - string
+            name of column of self.db on which to sort by
+
+        returns a new Ens obj with rows sorted according to db
+        """
+
+        self.db['_idx_'] = numpy.arange(0,len(self.db))
+        new_db = self.db.sort_values(by, axis=0, ascending=ascending, inplace=False, na_position='last')
+        
+        elements=new_db._idx_
+        output = type(self)(self.array[elements,:],y=self.y[elements],times=self.times,tjust=self.tjust)
+        output.db = new_db.drop('_idx_',axis=1)
+        return output   
+    
+    
     def plot(self,tlim=None,*args,**kwargs):
         """
         Plot ensemble vs time using matplotlib.pyplot.plot
